@@ -1,0 +1,6 @@
+{
+  "name": "Ferox",
+  "description": "Chat vocal pour joueurs Truckers of Europe avec bulle ronde style Messenger, audio persistant en jeu et coupure rapide du micro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
