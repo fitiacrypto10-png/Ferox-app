@@ -1,12 +1,12 @@
-# ⚡ FEROX — Chat Vocal & Bulle Flottante (Truckers of Europe)
+# ⚡ FEROX
 
 <p align="center">
   <img src="app/src/main/res/drawable/ic_bubble_logo.png" width="130" height="130" alt="Ferox Logo" />
 </p>
 
 <p align="center">
-  <b>Application mobile Android de communication vocale en direct pour la communauté <i>Truckers of Europe</i>.</b><br>
-  Bulle ronde style Messenger en jeu, maintien audio continu en arrière-plan et design épuré inspiré d'iOS.
+  <b>Application mobile officielle Ferox — Salons vocaux et communication en direct.</b><br>
+  Créée et développée par <b>delt slay</b>.
 </p>
 
 <p align="center">
