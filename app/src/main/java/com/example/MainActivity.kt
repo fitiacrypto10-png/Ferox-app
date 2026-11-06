@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Outside the application (Home, Game Truckers of Europe): show bubble
+        // Outside the application (Home, background): show bubble
         if (Settings.canDrawOverlays(this)) {
             FloatingBubbleService.setOverlayVisible(this, true)
         }

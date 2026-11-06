@@ -20,7 +20,7 @@ data class VoiceChatState(
     val isBubbleExpanded: Boolean = false,
     val activeSpeaker: VoiceParticipant,
     val participants: List<VoiceParticipant> = emptyList(),
-    val roomName: String = "Truckers of Europe Community"
+    val roomName: String = "Ferox Community"
 ) {
     companion object {
         fun defaultState(): VoiceChatState {
@@ -38,8 +38,8 @@ data class VoiceChatState(
                 mainSpeaker,
                 VoiceParticipant(
                     id = "member_1",
-                    name = "Trucker 1",
-                    role = "Chauffeur",
+                    name = "Membre 1",
+                    role = "Participant",
                     avatarResId = R.drawable.ic_bubble_logo,
                     isSpeaking = false,
                     isMuted = false,
@@ -63,7 +63,7 @@ data class VoiceChatState(
                 isBubbleExpanded = false,
                 activeSpeaker = mainSpeaker,
                 participants = participantsList,
-                roomName = "Truckers of Europe Voice"
+                roomName = "Ferox Voice"
             )
         }
     }

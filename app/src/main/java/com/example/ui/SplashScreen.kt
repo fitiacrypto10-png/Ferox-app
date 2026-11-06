@@ -109,7 +109,7 @@ fun SplashScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Truckers of Europe Community",
+                text = "Communauté Officielle",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF8E8E93)

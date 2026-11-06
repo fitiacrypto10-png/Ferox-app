@@ -50,7 +50,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Truckers of Europe voice chat floating bubble and audio background session" />
+                android:value="Ferox voice chat floating bubble and audio background session" />
         </service>
     </application>
 

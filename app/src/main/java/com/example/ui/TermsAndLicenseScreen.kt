@@ -305,7 +305,7 @@ fun TermsAndLicenseScreen(
 
                         IosTermsRow(
                             label = "Respect communautaire",
-                            value = "Le respect et la courtoisie sont requis entre les chauffeurs de Truckers of Europe."
+                            value = "Le respect et la courtoisie sont requis entre tous les membres de la communauté."
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))

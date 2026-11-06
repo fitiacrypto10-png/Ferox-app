@@ -156,8 +156,8 @@ class FloatingBubbleService : Service() {
             )
 
             val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Ferox - Truckers of Europe")
-                .setContentText("Bulle vocale active au-dessus du jeu")
+                .setContentTitle("Ferox")
+                .setContentText("Session vocale active en arrière-plan")
                 .setSmallIcon(R.drawable.ic_bubble_logo)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)

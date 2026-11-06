@@ -8,7 +8,7 @@ Implémentation d'un écran d'accueil avec transition après le logo de l'applic
 > Décisions validées lors de la phase de clarification :
 > - **Fréquence d'affichage** : Affiché au premier lancement après l'animation/splash logo, avec sauvegarde de l'acceptation (l'utilisateur n'est plus bloqué aux démarrages suivants). Un bouton d'accès rapide aux conditions reste accessible depuis l'application en cas de besoin.
 > - **Profil Facebook en temps réel** : Chargement direct de la photo de profil via le point d'accès Facebook (`https://graph.facebook.com/61594951162159/picture?type=large`) avec fallback local sécurisé, et ouverture du profil au clic sur l'avatar ou le badge créateur.
-> - **Contenu textuel & Orthographe** : Correction rigoureuse et formulation juridique / préventive soignée en français (gratuité totale, mise en garde explicite contre le scam/fraude, licence d'appartenance et règles de bonne conduite en vocal pour la communauté *Truckers of Europe*).
+> - **Contenu textuel & Orthographe** : Correction rigoureuse et formulation juridique / préventive soignée en français (gratuité totale, mise en garde explicite contre le scam/fraude, licence d'appartenance et règles de bonne conduite en vocal pour la communauté Ferox).
 
 - **Choix confirmé 1** : Affichage au premier lancement avec bouton « J'accepte et je continue ».
 - **Choix confirmé 2** : Profil Facebook officiel lié dynamiquement (`id=61594951162159`).
@@ -38,7 +38,7 @@ Implémentation d'un écran d'accueil avec transition après le logo de l'applic
    - **Bloc Avertissement Anti-Fraude & Sécurité (Anti-Scam)** :
      - Boîte d'alerte stylisée (ambre/rouge braise) : « Attention aux arnaques : Ferox est strictement gratuite. N'achetez jamais cette application et ne communiquez aucune coordonnée bancaire. »
    - **Conditions d'utilisation du chat vocal** :
-     - Respect mutuel entre chauffeurs / joueurs *Truckers of Europe*.
+     - Respect mutuel entre tous les membres de la communauté Ferox.
      - Utilisation responsable du micro et de la bulle en arrière-plan.
    - **Action d'engagement** : Bouton d'action large et interactif « Accepter et continuer » qui enregistre la préférence et ouvre la communauté vocale.
 3. **Lancements ultérieurs** : L'accès au web en plein écran se fait directement. Une discrète icône d'information permet de reconsulter la licence et le profil créateur à tout moment.

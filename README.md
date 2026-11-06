@@ -32,28 +32,22 @@ Vous pouvez installer directement l'application **Ferox** sur votre smartphone A
 
 ## 🌟 Présentation
 
-**Ferox** est l'application compagnon ultime conçue sur mesure pour les chauffeurs et joueurs de **Truckers of Europe**. Elle combine un salon vocal haute performance avec une **bulle flottante ronde extérieure** (style Messenger) permettant de communiquer et de couper son micro en pleine partie sans jamais devoir quitter le jeu.
+**Ferox** est l'application mobile officielle conçue pour la communauté. Elle combine un salon vocal haute performance, un maintien audio continu en arrière-plan et une interface fluide et épurée pour communiquer facilement et en direct.
 
 ---
 
 ## 🚀 Fonctionnalités Clés
 
-### 🎮 Salon Vocal Communautaire Plein Écran
+### 🎮 Salon Vocal Plein Écran
 - **Immersion totale** : Affichage fluide sans barre d'adresse ni encombrement visuel.
 - **WebRTC haute fidélité** : Transmission vocale instantanée à faible latence.
-- **Adaptation intelligente (Mobile First)** : Verrouillage strict du viewport pour éviter tout débordement horizontal ou effet de zoom arrière.
-- **Safe Area Insets** : Respect méticuleux de la barre d'état (heure, batterie) et de la barre de navigation gesture du smartphone pour des boutons 100% accessibles.
+- **Adaptation intelligente (Mobile First)** : Verrouillage strict du viewport pour un affichage adapté aux smartphones.
+- **Safe Area Insets** : Respect méticuleux de la barre d'état (heure, batterie) et de la barre de navigation du smartphone.
 
-### 💬 Bulle Ronde Flottante Extérieure (Style Messenger)
-- **Affichage exclusif en jeu** : La bulle apparaît automatiquement lorsque vous quittez l'app ou lancez *Truckers of Europe*, et s'efface proprement quand vous revenez dans l'appli.
-- **Auto-Snap Magnétique (« Pile Poil »)** : Déplacement fluide au doigt avec retour automatique et fixation douce contre le bord gauche ou droit le plus proche.
-- **Audio persistant en arrière-plan** : Service d'avant-plan avec `WAKE_LOCK` évitant toute coupure de voix en pleine partie.
-
-### 🎙️ Mini-Fenêtre de Contrôle Ultra-Compacte (125 dp)
-- Un simple tap sur la bulle ouvre un menu rapide compact avec l'action directe :
-  - 🔴 **« Couper micro »**
-  - 🟢 **« Activer micro »**
-- Synchronisation bidirectionnelle instantanée avec le flux audio WebRTC et le microphone Android.
+### 🎙️ Contrôle Rapide du Micro & Audio Persistant
+- Coupure et activation instantanées du micro avec retour d'état visuel clair.
+- Synchronisation bidirectionnelle instantanée avec le flux audio WebRTC.
+- Maintien audio continu et stable en arrière-plan.
 
 ### 🛡️ Fiche Créateur & Avertissement Anti-Scam
 - **Créateur officiel** : Conçu et développé exclusivement par **[delt slay](https://www.facebook.com/profile.php?id=61594951162159)**.
@@ -85,7 +79,7 @@ Vous pouvez installer directement l'application **Ferox** sur votre smartphone A
 - **Interface UI** : Jetpack Compose (Material Design 3)
 - **Architecture** : MVVM (Model-View-ViewModel), StateFlow, Coroutines
 - **Réseau & WebRTC** : Android WebView avec accélération matérielle, cookies tiers et hooks JavaScript de capture audio
-- **Services d'arrière-plan** : Foreground Service (`specialUse`), `SYSTEM_ALERT_WINDOW`, `PARTIAL_WAKE_LOCK`
+- **Services d'arrière-plan** : Foreground Service (`specialUse`), `PARTIAL_WAKE_LOCK`
 - **Détection réseau** : `ConnectivityManager` avec debounce antibruit de 1,8 s (évite les micro-coupures en Wi-Fi)
 - **Chargement d'images** : Coil Compose
 
@@ -118,11 +112,11 @@ gradle :app:bundleRelease
 1. Dans **Google AI Studio Build**, ouvrez le menu **Settings** (icône d'engrenage en haut à droite).
 2. Sélectionnez **« Push to GitHub »** (ou **« Connect GitHub »**).
 3. Autorisez l'accès à votre compte GitHub personnel.
-4. Choisissez le nom du dépôt (ex: `ferox-voice-truckers`) et validez l'envoi.
+4. Choisissez le nom du dépôt (ex: `ferox-app`) et validez l'envoi.
 5. Votre projet est immédiatement publié avec ce `README.md` officiel, votre logo et l'ensemble du code source !
 
 ---
 
 <p align="center">
-  <i>Développé avec passion pour tous les chauffeurs de la communauté Truckers of Europe. 🚚💨</i>
+  <i>Développé avec passion pour toute la communauté Ferox.</i>
 </p>
