@@ -107,16 +107,6 @@ gradle :app:bundleRelease
 
 ---
 
-## 📤 Comment publier sur votre compte GitHub depuis AI Studio
-
-1. Dans **Google AI Studio Build**, ouvrez le menu **Settings** (icône d'engrenage en haut à droite).
-2. Sélectionnez **« Push to GitHub »** (ou **« Connect GitHub »**).
-3. Autorisez l'accès à votre compte GitHub personnel.
-4. Choisissez le nom du dépôt (ex: `ferox-app`) et validez l'envoi.
-5. Votre projet est immédiatement publié avec ce `README.md` officiel, votre logo et l'ensemble du code source !
-
----
-
 <p align="center">
   <i>Développé avec passion pour toute la communauté Ferox.</i>
 </p>
