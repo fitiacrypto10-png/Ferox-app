@@ -13,9 +13,20 @@
   <img src="https://img.shields.io/badge/Version-Bêta%201.0-0A84FF?style=for-the-badge" alt="Version Bêta 1.0" />
   <img src="https://img.shields.io/badge/Statut-100%25%20Gratuit-10B981?style=for-the-badge" alt="100% Gratuit" />
   <img src="https://img.shields.io/badge/Android-7.0%2B%20(API%2024%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
-  <img src="https://img.shields.io/badge/Jetpack%20Compose-M3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
+  <img src="https://img.shields.io/badge/Télécharger-APK%20(Direct)-FF7043?style=for-the-badge&logo=android&logoColor=white" alt="Télécharger APK" />
   <img src="https://img.shields.io/badge/Créateur-delt%20slay-blue?style=for-the-badge&logo=facebook&logoColor=white" alt="delt slay" />
 </p>
+
+---
+
+## 📥 Télécharger l'APK
+
+Vous pouvez installer directement l'application **Ferox** sur votre smartphone Android :
+
+- **Option 1 (Recommandée - GitHub Releases)** : Rendez-vous dans la section [Releases](../../releases) de ce dépôt GitHub pour télécharger la dernière version de `Ferox-v1.0-Beta.apk`.
+- **Option 2 (Fichier inclus dans le dépôt)** : Téléchargez directement le fichier [`release/Ferox-v1.0-Beta.apk`](release/Ferox-v1.0-Beta.apk) présent dans ce dépôt.
+
+> 💡 **Installation sur Android** : Une fois le fichier `.apk` téléchargé, appuyez dessus pour lancer l'installation. Si Android affiche un message de sécurité, autorisez l'installation depuis cette source (*Paramètres > Sécurité > Installer des applications inconnues*).
 
 ---
 
