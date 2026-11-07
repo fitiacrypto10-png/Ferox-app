@@ -68,5 +68,23 @@ class ExampleRobolectricTest {
         // Verify monitor can be instantiated and checks without crashing
         monitor.checkCurrentConnectivity()
     }
+
+    @Test
+    fun `test app updater get installed version code`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val versionCode = com.example.updater.AppUpdaterManager.getInstalledVersionCode(context)
+        assertTrue(versionCode >= 1L)
+    }
+
+    @Test
+    fun `test app updater handles network error silently`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val result = com.example.updater.AppUpdaterManager.checkForUpdate(
+            context,
+            "https://invalid-domain-name-test.example.com/version.json"
+        )
+        // Must return null without crashing
+        org.junit.Assert.assertNull(result)
+    }
 }
 

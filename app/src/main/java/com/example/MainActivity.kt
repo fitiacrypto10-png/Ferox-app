@@ -20,16 +20,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.example.ui.SplashScreen
 import com.example.ui.TermsAndLicenseScreen
 import com.example.ui.TermsPreferences
 import com.example.ui.VoiceNookApp
 import com.example.ui.theme.MyApplicationTheme
+import com.example.updater.AppUpdaterManager
+import com.example.updater.UpdateDialog
+import com.example.updater.UpdateInfo
 import com.example.voice.FloatingBubbleService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
     private var hasOverlayPermission by mutableStateOf(false)
+    private var availableUpdate by mutableStateOf<UpdateInfo?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,6 +128,21 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                // Afficher la boîte de dialogue sombre de mise à jour si une version plus récente existe
+                availableUpdate?.let { updateInfo ->
+                    UpdateDialog(
+                        updateInfo = updateInfo,
+                        onUpdate = {
+                            val info = updateInfo
+                            availableUpdate = null
+                            AppUpdaterManager.downloadAndInstallApk(this@MainActivity, info)
+                        },
+                        onDismiss = {
+                            availableUpdate = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -129,6 +152,20 @@ class MainActivity : ComponentActivity() {
         hasOverlayPermission = Settings.canDrawOverlays(this)
         // Inside the application: hide bubble as requested ("pas dans l'application")
         FloatingBubbleService.setOverlayVisible(this, false)
+
+        // Vérification de mise à jour GitHub en arrière-plan à chaque retour au premier plan
+        checkForAppUpdate()
+    }
+
+    private fun checkForAppUpdate() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val update = AppUpdaterManager.checkForUpdate(this@MainActivity)
+            if (update != null) {
+                withContext(Dispatchers.Main) {
+                    availableUpdate = update
+                }
+            }
+        }
     }
 
     override fun onUserLeaveHint() {

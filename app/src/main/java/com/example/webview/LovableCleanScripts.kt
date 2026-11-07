@@ -154,11 +154,56 @@ object LovableCleanScripts {
             window.__voiceHookInstalled = true;
             window.__micMuted = false;
             window.__voiceAudioTracks = window.__voiceAudioTracks || [];
+            window.__audioContexts = window.__audioContexts || [];
 
-            // Intercept getUserMedia to store audio tracks
+            // 1. Hook and auto-resume AudioContext to bypass mobile browser audio suspension
+            var OrigAC = window.AudioContext || window.webkitAudioContext;
+            if (OrigAC) {
+                var ProxyAC = function(opts) {
+                    var ctx = opts ? new OrigAC(opts) : new OrigAC();
+                    window.__audioContexts.push(ctx);
+                    if (ctx.state === 'suspended') {
+                        ctx.resume().catch(function(){});
+                    }
+                    return ctx;
+                };
+                ProxyAC.prototype = OrigAC.prototype;
+                window.AudioContext = ProxyAC;
+                window.webkitAudioContext = ProxyAC;
+            }
+
+            // Function to wake up and resume any suspended audio channels
+            function unlockAllAudio() {
+                try {
+                    if (window.__audioContexts) {
+                        window.__audioContexts.forEach(function(ctx) {
+                            if (ctx.state === 'suspended') {
+                                ctx.resume().catch(function(){});
+                            }
+                        });
+                    }
+                    var audios = document.querySelectorAll('audio, video');
+                    for (var i = 0; i < audios.length; i++) {
+                        var el = audios[i];
+                        el.muted = false;
+                        if (el.paused && (el.srcObject || el.src)) {
+                            el.play().catch(function(){});
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // Auto-unlock on user touches / clicks
+            ['touchstart', 'touchend', 'click', 'pointerdown'].forEach(function(ev) {
+                document.addEventListener(ev, unlockAllAudio, { passive: true, capture: true });
+            });
+            setInterval(unlockAllAudio, 2500);
+
+            // 2. Intercept getUserMedia to store audio tracks and enforce active state
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 var origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
                 navigator.mediaDevices.getUserMedia = function(constraints) {
+                    unlockAllAudio();
                     return origGUM(constraints).then(function(stream) {
                         if (stream && stream.getAudioTracks) {
                             stream.getAudioTracks().forEach(function(track) {
@@ -171,7 +216,7 @@ object LovableCleanScripts {
                 };
             }
 
-            // Function to mute or unmute all audio tracks and page buttons
+            // 3. Function to mute or unmute all audio tracks and page buttons
             window.setMicrophoneMuted = function(isMuted) {
                 window.__micMuted = isMuted;
 

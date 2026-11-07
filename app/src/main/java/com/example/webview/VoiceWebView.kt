@@ -1,9 +1,13 @@
 package com.example.webview
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.net.Uri
 import android.net.http.SslError
 import android.view.ViewGroup
@@ -28,7 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import com.example.voice.VoiceStateHolder
 
 const val VOICE_NOOK_URL = "https://voice-nook-community.lovable.app/app"
@@ -42,7 +48,9 @@ fun VoiceWebView(
     onProgressChanged: (Int) -> Unit,
     onConnectionError: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     var fileUploadCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    var pendingWebPermissionRequest by remember { mutableStateOf<PermissionRequest?>(null) }
 
     val fileChooserLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -67,20 +75,56 @@ fun VoiceWebView(
         fileUploadCallback = null
     }
 
-    val currentLauncher by rememberUpdatedState(fileChooserLauncher)
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pendingWebPermissionRequest?.let { req ->
+                try {
+                    req.grant(req.resources)
+                } catch (e: Exception) {
+                    try {
+                        req.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                    } catch (e2: Exception) {}
+                }
+            }
+        } else {
+            pendingWebPermissionRequest?.deny()
+        }
+        pendingWebPermissionRequest = null
+    }
 
-    // Ensure any pending callback is released when leaving composition
+    val currentFileChooserLauncher by rememberUpdatedState(fileChooserLauncher)
+    val currentMicLauncher by rememberUpdatedState(micPermissionLauncher)
+
+    val audioManager = remember {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }
+
+    // Configure hardware audio mode for VoIP communication (prevents earpiece routing and muting)
     DisposableEffect(Unit) {
+        val prevMode = audioManager?.mode ?: AudioManager.MODE_NORMAL
+        val prevSpeaker = audioManager?.isSpeakerphoneOn ?: false
+        try {
+            audioManager?.mode = AudioManager.MODE_IN_COMMUNICATION
+            audioManager?.isSpeakerphoneOn = true
+        } catch (e: Exception) {}
+
         onDispose {
+            try {
+                audioManager?.mode = prevMode
+                audioManager?.isSpeakerphoneOn = prevSpeaker
+            } catch (e: Exception) {}
             fileUploadCallback?.onReceiveValue(null)
             fileUploadCallback = null
+            pendingWebPermissionRequest = null
         }
     }
 
     AndroidView(
         modifier = modifier,
-        factory = { context ->
-            WebView(context).apply {
+        factory = { ctx ->
+            WebView(ctx).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -113,6 +157,17 @@ fun VoiceWebView(
                     layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
                     mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     javaScriptCanOpenWindowsAutomatically = true
+
+                    // Clean UserAgent to avoid WebRTC / LiveKit blocking on mobile WebViews
+                    val defaultUa = userAgentString
+                    var cleanedUa = defaultUa
+                    if (cleanedUa.contains("; wv")) {
+                        cleanedUa = cleanedUa.replace("; wv", "")
+                    }
+                    if (cleanedUa.contains("Version/4.0 ")) {
+                        cleanedUa = cleanedUa.replace("Version/4.0 ", "")
+                    }
+                    userAgentString = cleanedUa
                 }
 
                 // Handle file and image downloads from web app
@@ -122,7 +177,7 @@ fun VoiceWebView(
                             data = Uri.parse(downloadUrl)
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
-                        context.startActivity(downloadIntent)
+                        ctx.startActivity(downloadIntent)
                     } catch (e: Exception) {
                         // Ignore if no activity handles the download URL
                     }
@@ -135,8 +190,35 @@ fun VoiceWebView(
                     }
 
                     override fun onPermissionRequest(request: PermissionRequest?) {
-                        // Automatically grant audio recording permission to the WebRTC web app
-                        request?.grant(request.resources)
+                        if (request == null) return
+
+                        // CRITICAL FOR SAMSUNG / XIAOMI / HUAWEI: PermissionRequest must be granted on the UI thread!
+                        post {
+                            val hasMic = ContextCompat.checkSelfPermission(
+                                ctx,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (hasMic) {
+                                try {
+                                    request.grant(request.resources)
+                                } catch (e: Exception) {
+                                    try {
+                                        request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                                    } catch (e2: Exception) {}
+                                }
+                            } else {
+                                pendingWebPermissionRequest = request
+                                currentMicLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
+                    }
+
+                    override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                        super.onPermissionRequestCanceled(request)
+                        if (pendingWebPermissionRequest == request) {
+                            pendingWebPermissionRequest = null
+                        }
                     }
 
                     override fun onShowFileChooser(
@@ -174,7 +256,7 @@ fun VoiceWebView(
                             }
 
                             val chooser = Intent.createChooser(intent, "Choisir une image ou un fichier")
-                            currentLauncher.launch(chooser)
+                            currentFileChooserLauncher.launch(chooser)
                             true
                         } catch (e: Exception) {
                             fileUploadCallback?.onReceiveValue(null)

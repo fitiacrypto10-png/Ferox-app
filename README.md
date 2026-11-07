@@ -23,7 +23,7 @@
 
 Vous pouvez installer directement l'application **Ferox** sur votre smartphone Android :
 
-- **Option 1 (Recommandée - GitHub Releases)** : Rendez-vous dans la section [Releases](../../releases) de ce dépôt GitHub pour télécharger la dernière version de `Ferox-v1.0-Beta.apk`.
+- **Option 1 (Recommandée - GitHub Releases)** : Rendez-vous dans la section [Releases](https://github.com/fitiacrypto10-png/Ferox-app/releases) de ce dépôt GitHub pour télécharger la dernière version de `Ferox-v1.0-Beta.apk`.
 - **Option 2 (Fichier inclus dans le dépôt)** : Téléchargez directement le fichier [`release/Ferox-v1.0-Beta.apk`](release/Ferox-v1.0-Beta.apk) présent dans ce dépôt.
 
 > 💡 **Installation sur Android** : Une fois le fichier `.apk` téléchargé, appuyez dessus pour lancer l'installation. Si Android affiche un message de sécurité, autorisez l'installation depuis cette source (*Paramètres > Sécurité > Installer des applications inconnues*).
