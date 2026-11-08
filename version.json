@@ -1,5 +1,5 @@
 {
   "versionCode": 2,
   "apkUrl": "https://github.com/fitiacrypto10-png/Ferox-app/releases/latest/download/Ferox-v1.0-Beta.apk",
-  "notes": "Mise à jour Ferox v1.0 :\n- Support de l'importation d'images et de fichiers\n- Salons vocaux haute fidélité\n- Optimisation de la stabilité Wi-Fi et interface Dark Mode"
+  "notes": "Mise à jour Ferox v1.9 :\n- Correction du débordement des textes et bulles de messages\n- Dégagement du champ de saisie pour que le dernier message soit toujours visible\n- Optimisation vocale WebRTC pour tous les modèles de téléphones\n- Importation de fichiers et photos"
 }

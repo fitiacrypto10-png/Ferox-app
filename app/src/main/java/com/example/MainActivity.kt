@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
     private var hasOverlayPermission by mutableStateOf(false)
     private var availableUpdate by mutableStateOf<UpdateInfo?>(null)
+    private var dismissedVersionCode: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -139,6 +140,7 @@ class MainActivity : ComponentActivity() {
                             AppUpdaterManager.downloadAndInstallApk(this@MainActivity, info)
                         },
                         onDismiss = {
+                            dismissedVersionCode = updateInfo.versionCode
                             availableUpdate = null
                         }
                     )
@@ -160,7 +162,7 @@ class MainActivity : ComponentActivity() {
     private fun checkForAppUpdate() {
         lifecycleScope.launch(Dispatchers.IO) {
             val update = AppUpdaterManager.checkForUpdate(this@MainActivity)
-            if (update != null) {
+            if (update != null && update.versionCode != dismissedVersionCode) {
                 withContext(Dispatchers.Main) {
                     availableUpdate = update
                 }
