@@ -77,6 +77,7 @@ object AppUpdaterManager {
                 readTimeout = 8000
                 useCaches = false
                 defaultUseCaches = false
+                instanceFollowRedirects = true
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("User-Agent", "Ferox-Updater-Android")
             }
@@ -93,6 +94,10 @@ object AppUpdaterManager {
                 val notes = json.optString("notes", "")
 
                 val currentVersion = getInstalledVersionCode(context)
+                android.util.Log.d(
+                    "FeroxUpdater",
+                    "Version check: installed=$currentVersion, server=$serverVersionCode, url=$apkUrl"
+                )
 
                 if (serverVersionCode > currentVersion && apkUrl.isNotBlank()) {
                     return@withContext UpdateInfo(

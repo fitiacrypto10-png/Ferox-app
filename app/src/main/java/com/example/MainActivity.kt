@@ -130,20 +130,22 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Afficher la boîte de dialogue sombre de mise à jour si une version plus récente existe
-                availableUpdate?.let { updateInfo ->
-                    UpdateDialog(
-                        updateInfo = updateInfo,
-                        onUpdate = {
-                            val info = updateInfo
-                            availableUpdate = null
-                            AppUpdaterManager.downloadAndInstallApk(this@MainActivity, info)
-                        },
-                        onDismiss = {
-                            dismissedVersionCode = updateInfo.versionCode
-                            availableUpdate = null
-                        }
-                    )
+                // Afficher la boîte de dialogue sombre de mise à jour une fois le splash terminé
+                if (!isSplashVisible) {
+                    availableUpdate?.let { updateInfo ->
+                        UpdateDialog(
+                            updateInfo = updateInfo,
+                            onUpdate = {
+                                val info = updateInfo
+                                availableUpdate = null
+                                AppUpdaterManager.downloadAndInstallApk(this@MainActivity, info)
+                            },
+                            onDismiss = {
+                                dismissedVersionCode = updateInfo.versionCode
+                                availableUpdate = null
+                            }
+                        )
+                    }
                 }
             }
         }

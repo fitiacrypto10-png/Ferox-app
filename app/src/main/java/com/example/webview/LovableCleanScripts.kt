@@ -76,10 +76,18 @@ object LovableCleanScripts {
                         '    max-width: 100% !important;',
                         '    box-sizing: border-box !important;',
                         '}',
-                        '/* Dégager le bas du fil de discussion pour que le dernier message ne soit pas masqué par la barre de saisie */',
-                        '[class*="messages"], [class*="chat"], [class*="conversation"], [class*="scroll"], [role="log"] {',
-                        '    padding-bottom: 96px !important;',
-                        '    box-sizing: border-box !important;',
+                        '/* S\'assurer que la barre de saisie de message descend bien tout en bas sans espace vide */',
+                        'footer, [class*="footer"], [class*="input-container"], [class*="input-bar"], [class*="chat-input"], form:has(input) {',
+                        '    margin-bottom: 0 !important;',
+                        '    bottom: 0 !important;',
+                        '}',
+                        '[class*="chat"], .chat-container, .chat-view, [class*="conversation"] {',
+                        '    padding-bottom: 0 !important;',
+                        '    margin-bottom: 0 !important;',
+                        '}',
+                        '/* Dégagement léger uniquement sur le dernier message pour qu\'il reste lisible */',
+                        '[class*="message-list"] > *:last-child, [class*="messages-list"] > *:last-child {',
+                        '    margin-bottom: 8px !important;',
                         '}'
                     ].join('\n');
 
