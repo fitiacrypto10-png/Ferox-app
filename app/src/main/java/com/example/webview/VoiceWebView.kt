@@ -266,6 +266,9 @@ fun VoiceWebView(
                     }
                 }
 
+                // Nettoyer les anciens caches lourds pour maintenir l'application sous les 20 Mo
+                com.example.network.DataSaverManager.cleanupAppStorage(ctx, this)
+
                 webViewClient = object : WebViewClient() {
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                         super.onPageStarted(view, url, favicon)

@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.network.DataSaverManager
 import com.example.ui.SplashScreen
 import com.example.ui.TermsAndLicenseScreen
 import com.example.ui.TermsPreferences
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        DataSaverManager.cleanupAppStorage(applicationContext)
 
         setContent {
             MyApplicationTheme {
