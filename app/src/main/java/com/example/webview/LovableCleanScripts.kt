@@ -291,4 +291,98 @@ object LovableCleanScripts {
     fun getSetMicMutedScript(muted: Boolean): String {
         return "if (window.setMicrophoneMuted) { window.setMicrophoneMuted($muted); }"
     }
+
+    val CHAT_NOTIFICATION_JS = """
+        (function() {
+            if (window.__chatNotificationInstalled) return;
+            window.__chatNotificationInstalled = true;
+
+            // 1. Fonction pour envoyer un message tapé depuis la notification Android (Quick Reply)
+            window.__sendChatMessageFromNotification = function(text) {
+                try {
+                    var input = document.querySelector('textarea, input[placeholder*="message" i], input[placeholder*="envoyer" i], [contenteditable="true"]');
+                    if (!input) return false;
+
+                    if (input.tagName.toLowerCase() === 'textarea' || input.tagName.toLowerCase() === 'input') {
+                        input.value = text;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else {
+                        input.innerText = text;
+                        input.dispatchEvent(new InputEvent('input', { bubbles: true, data: text }));
+                    }
+
+                    setTimeout(function() {
+                        var sendBtn = document.querySelector('button[type="submit"], button[aria-label*="send" i], button[aria-label*="envoyer" i], form button:last-child');
+                        if (sendBtn) {
+                            sendBtn.click();
+                        } else {
+                            var enterEv = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
+                            input.dispatchEvent(enterEv);
+                        }
+                    }, 120);
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            };
+
+            // 2. Intercepter les notifications web pour les relayer aux notifications Android
+            try {
+                if (typeof window.Notification !== 'undefined') {
+                    window.Notification = function(title, options) {
+                        try {
+                            var body = (options && options.body) ? options.body : '';
+                            if (window.AndroidChatNotifier) {
+                                window.AndroidChatNotifier.onNewMessage(title, body);
+                            }
+                        } catch(e) {}
+                    };
+                    window.Notification.permission = 'granted';
+                    window.Notification.requestPermission = function(cb) {
+                        if (cb) cb('granted');
+                        return Promise.resolve('granted');
+                    };
+                }
+            } catch(e) {}
+
+            // 3. Observer pour détecter les nouveaux messages reçus quand l'app est en arrière-plan
+            var seenMessages = new Set();
+            function inspectNewMessages() {
+                try {
+                    var msgNodes = document.querySelectorAll('[class*="message-item"], [class*="chat-message"], [class*="bubble"], [data-message-id]');
+                    if (msgNodes.length === 0) return;
+
+                    for (var i = 0; i < msgNodes.length; i++) {
+                        var node = msgNodes[i];
+                        var text = (node.innerText || '').trim();
+                        if (!text || seenMessages.has(text)) continue;
+                        seenMessages.add(text);
+
+                        // Ne pas notifier l'historique initial
+                        if (seenMessages.size <= 20) continue;
+
+                        // Vérifier si le message vient d'un autre utilisateur
+                        var isOwn = node.classList.contains('justify-end') || 
+                                    node.classList.contains('items-end') || 
+                                    node.querySelector('[class*="self"]') !== null;
+
+                        if (!isOwn && window.AndroidChatNotifier) {
+                            var senderEl = node.querySelector('[class*="author"], [class*="name"], [class*="user"], strong, b');
+                            var sender = senderEl ? senderEl.innerText.trim() : 'Ferox Message';
+                            var cleanMsg = text.replace(sender, '').trim();
+                            if (cleanMsg.length > 0) {
+                                window.AndroidChatNotifier.onNewMessage(sender, cleanMsg);
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            try {
+                var chatObserver = new MutationObserver(inspectNewMessages);
+                chatObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+            } catch(e) {}
+        })();
+    """.trimIndent()
 }

@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         DataSaverManager.cleanupAppStorage(applicationContext)
+        com.example.notification.NotificationBridge.init(applicationContext)
 
         setContent {
             MyApplicationTheme {
@@ -155,6 +156,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        com.example.notification.NotificationBridge.isAppInForeground = true
         hasOverlayPermission = Settings.canDrawOverlays(this)
         // Inside the application: hide bubble as requested ("pas dans l'application")
         FloatingBubbleService.setOverlayVisible(this, false)
@@ -184,6 +186,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        com.example.notification.NotificationBridge.isAppInForeground = false
         // User switching away: show bubble outside
         if (!isFinishing && Settings.canDrawOverlays(this)) {
             FloatingBubbleService.setOverlayVisible(this, true)

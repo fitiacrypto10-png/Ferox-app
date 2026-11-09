@@ -49,30 +49,12 @@ fun VoiceWebView(
     onConnectionError: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    var fileUploadCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
     var pendingWebPermissionRequest by remember { mutableStateOf<PermissionRequest?>(null) }
 
     val fileChooserLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val uris: Array<Uri>? = if (result.resultCode == Activity.RESULT_OK) {
-            val intentData = result.data
-            val parsed = WebChromeClient.FileChooserParams.parseResult(result.resultCode, intentData)
-            if (parsed != null && parsed.isNotEmpty()) {
-                parsed
-            } else if (intentData?.data != null) {
-                arrayOf(intentData.data!!)
-            } else if (intentData?.clipData != null) {
-                val clipData = intentData.clipData!!
-                Array(clipData.itemCount) { i -> clipData.getItemAt(i).uri }
-            } else {
-                null
-            }
-        } else {
-            null
-        }
-        fileUploadCallback?.onReceiveValue(uris)
-        fileUploadCallback = null
+        FileChooserHelper.processResult(result.resultCode, result.data)
     }
 
     val micPermissionLauncher = rememberLauncherForActivityResult(
@@ -115,9 +97,8 @@ fun VoiceWebView(
                 audioManager?.mode = prevMode
                 audioManager?.isSpeakerphoneOn = prevSpeaker
             } catch (e: Exception) {}
-            fileUploadCallback?.onReceiveValue(null)
-            fileUploadCallback = null
             pendingWebPermissionRequest = null
+            com.example.notification.NotificationBridge.unregisterWebView()
         }
     }
 
@@ -137,6 +118,13 @@ fun VoiceWebView(
                 // Keep webview running audio and cookies even when backgrounded
                 CookieManager.getInstance().setAcceptCookie(true)
                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                // Enregistrer le pont de notifications pour les réponses rapides style Messenger
+                com.example.notification.NotificationBridge.registerWebView(this)
+                addJavascriptInterface(
+                    com.example.notification.NotificationBridge.createJsInterface(ctx),
+                    "AndroidChatNotifier"
+                )
 
                 settings.apply {
                     javaScriptEnabled = true
@@ -226,41 +214,15 @@ fun VoiceWebView(
                         filePathCallback: ValueCallback<Array<Uri>>?,
                         fileChooserParams: FileChooserParams?
                     ): Boolean {
-                        // Cancel previous pending callback if any
-                        fileUploadCallback?.onReceiveValue(null)
-                        fileUploadCallback = filePathCallback
+                        if (filePathCallback == null) return false
+                        FileChooserHelper.pendingUploadCallback = filePathCallback
 
                         return try {
-                            val intent = try {
-                                val base = fileChooserParams?.createIntent()
-                                if (base != null) {
-                                    if (base.type.isNullOrBlank()) {
-                                        base.type = "*/*"
-                                    }
-                                    base
-                                } else {
-                                    Intent(Intent.ACTION_GET_CONTENT).apply {
-                                        addCategory(Intent.CATEGORY_OPENABLE)
-                                        type = "*/*"
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                Intent(Intent.ACTION_GET_CONTENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE)
-                                    type = "*/*"
-                                }
-                            }
-
-                            if (fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE) {
-                                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                            }
-
-                            val chooser = Intent.createChooser(intent, "Choisir une image ou un fichier")
-                            currentFileChooserLauncher.launch(chooser)
+                            val chooserIntent = FileChooserHelper.createFileChooserIntent(ctx, fileChooserParams)
+                            currentFileChooserLauncher.launch(chooserIntent)
                             true
                         } catch (e: Exception) {
-                            fileUploadCallback?.onReceiveValue(null)
-                            fileUploadCallback = null
+                            FileChooserHelper.cancel()
                             false
                         }
                     }
@@ -270,6 +232,19 @@ fun VoiceWebView(
                 com.example.network.DataSaverManager.cleanupAppStorage(ctx, this)
 
                 webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): WebResourceResponse? {
+                        if (request != null) {
+                            val throttled = com.example.network.DataSaverManager.interceptMediaRequest(request)
+                            if (throttled != null) {
+                                return throttled
+                            }
+                        }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                         super.onPageStarted(view, url, favicon)
                         // Pre-inject mobile viewport fit css, Lovable logo purge, and audio hook
@@ -284,6 +259,7 @@ fun VoiceWebView(
                         view?.evaluateJavascript(LovableCleanScripts.MOBILE_VIEWPORT_FIT_JS, null)
                         view?.evaluateJavascript(LovableCleanScripts.HIDE_LOVABLE_JS, null)
                         view?.evaluateJavascript(LovableCleanScripts.SETUP_WEBRTC_MIC_HOOK_JS, null)
+                        view?.evaluateJavascript(LovableCleanScripts.CHAT_NOTIFICATION_JS, null)
 
                         // Apply current mic state to the web app
                         val isMuted = VoiceStateHolder.isMicMuted.value

@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.voicenook.xvrq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 5
-    versionName = "2.2"
+    versionCode = 7
+    versionName = "2.4"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
