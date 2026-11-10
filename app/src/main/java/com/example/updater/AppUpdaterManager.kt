@@ -12,11 +12,14 @@ import android.os.Environment
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -150,98 +153,139 @@ object AppUpdaterManager {
     }
 
     /**
-     * Télécharge l'APK avec DownloadManager et déclenche automatiquement l'installation.
+     * Ouvre la page des versions GitHub dans le navigateur en cas de besoin de téléchargement direct.
+     */
+    fun openGitHubReleasesWeb(context: Context) {
+        try {
+            val browserIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://github.com/fitiacrypto10-png/Ferox-app/releases")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(browserIntent)
+        } catch (ignored: Exception) {}
+    }
+
+    /**
+     * Télécharge directement l'APK en arrière-plan avec gestion des redirections GitHub / AWS S3
+     * et lance automatiquement l'installation dès la fin du téléchargement.
      */
     fun downloadAndInstallApk(
         context: Context,
         updateInfo: UpdateInfo,
         onStarted: () -> Unit = {}
     ) {
-        try {
-            // Vérifier la permission d'installation avant de télécharger
-            if (!canInstallUnknownApps(context)) {
-                Toast.makeText(
-                    context,
-                    "Veuillez autoriser Ferox à installer des applications inconnues pour appliquer la mise à jour.",
-                    Toast.LENGTH_LONG
-                ).show()
-                openInstallPermissionSettings(context)
-            }
-
-            val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                ?: context.filesDir
-
-            val fileName = "Ferox-Update-${updateInfo.versionCode}.apk"
-            val destinationFile = File(downloadDir, fileName)
-
-            if (destinationFile.exists()) {
-                destinationFile.delete()
-            }
-
-            val downloadManager =
-                context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
-            if (downloadManager == null) {
-                Toast.makeText(context, "Service de téléchargement indisponible", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            val uri = Uri.parse(updateInfo.apkUrl)
-            val request = DownloadManager.Request(uri).apply {
-                setTitle("Mise à jour Ferox v${updateInfo.versionCode}")
-                setDescription("Téléchargement de la nouvelle version...")
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setMimeType("application/vnd.android.package-archive")
-                setDestinationUri(Uri.fromFile(destinationFile))
-            }
-
-            // Désinscrire un ancien récepteur si nécessaire
-            downloadReceiver?.let {
-                try {
-                    context.applicationContext.unregisterReceiver(it)
-                } catch (ignored: Exception) {}
-            }
-
-            val enqueueId = downloadManager.enqueue(request)
-            activeDownloadId = enqueueId
-            onStarted()
-
+        if (!canInstallUnknownApps(context)) {
             Toast.makeText(
                 context,
-                "Téléchargement de la mise à jour démarré...",
-                Toast.LENGTH_SHORT
+                "Veuillez autoriser Ferox à installer des applications inconnues pour appliquer la mise à jour.",
+                Toast.LENGTH_LONG
             ).show()
+            openInstallPermissionSettings(context)
+        }
 
-            val receiver = object : BroadcastReceiver() {
-                override fun onReceive(recvContext: Context?, intent: Intent?) {
-                    val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
-                    if (id == enqueueId) {
-                        try {
-                            context.applicationContext.unregisterReceiver(this)
-                        } catch (ignored: Exception) {}
-                        downloadReceiver = null
+        onStarted()
+        Toast.makeText(
+            context,
+            "Téléchargement de la mise à jour Ferox v${updateInfo.versionCode} en cours...",
+            Toast.LENGTH_SHORT
+        ).show()
 
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                var currentUrl = updateInfo.apkUrl
+                var connection: HttpURLConnection? = null
+                var redirectCount = 0
+
+                // Suivre les redirections (GitHub vers AWS S3)
+                while (redirectCount < 6) {
+                    val url = URL(currentUrl)
+                    connection = (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = 12000
+                        readTimeout = 30000
+                        instanceFollowRedirects = false
+                        setRequestProperty("User-Agent", "Ferox-Updater-Android")
+                        setRequestProperty("Accept", "*/*")
+                    }
+
+                    val code = connection.responseCode
+                    if (code == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        code == HttpURLConnection.HTTP_MOVED_PERM ||
+                        code == 307 || code == 308
+                    ) {
+                        val location = connection.getHeaderField("Location")
+                        connection.disconnect()
+                        if (!location.isNullOrBlank()) {
+                            currentUrl = location
+                            redirectCount++
+                            continue
+                        }
+                    }
+                    break
+                }
+
+                val conn = connection
+                val finalCode = conn?.responseCode ?: -1
+
+                if (finalCode !in 200..299 || conn == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "Le fichier n'est pas encore disponible sur le serveur GitHub (Erreur $finalCode). Ouverture de la page GitHub...",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        openGitHubReleasesWeb(context)
+                    }
+                    return@launch
+                }
+
+                val destinationFile = File(context.cacheDir, "Ferox-Update-${updateInfo.versionCode}.apk")
+                if (destinationFile.exists()) {
+                    destinationFile.delete()
+                }
+
+                val inputStream = conn.inputStream
+                val outputStream = FileOutputStream(destinationFile)
+
+                val buffer = ByteArray(16384)
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                }
+
+                outputStream.flush()
+                outputStream.close()
+                inputStream.close()
+                conn.disconnect()
+
+                // Vérifier que le fichier est un APK valide (> 500 Ko) et non une page d'erreur HTML
+                if (destinationFile.exists() && destinationFile.length() > 500_000) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Téléchargement terminé ! Lancement de l'installation...", Toast.LENGTH_SHORT).show()
                         installApk(context, destinationFile)
                     }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "Fichier de mise à jour incomplet. Ouverture de la page GitHub pour téléchargement manuel...",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        openGitHubReleasesWeb(context)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "Erreur réseau: ${e.localizedMessage ?: "impossible de télécharger"}. Ouverture de GitHub...",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    openGitHubReleasesWeb(context)
                 }
             }
-
-            downloadReceiver = receiver
-            val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.applicationContext.registerReceiver(
-                    receiver,
-                    filter,
-                    Context.RECEIVER_EXPORTED
-                )
-            } else {
-                context.applicationContext.registerReceiver(receiver, filter)
-            }
-        } catch (e: Exception) {
-            Toast.makeText(
-                context,
-                "Impossible de démarrer le téléchargement : ${e.localizedMessage ?: "erreur"}",
-                Toast.LENGTH_SHORT
-            ).show()
         }
     }
 
@@ -249,8 +293,9 @@ object AppUpdaterManager {
      * Lance l'installation de l'APK téléchargé via FileProvider.
      */
     fun installApk(context: Context, apkFile: File) {
-        if (!apkFile.exists()) {
-            Toast.makeText(context, "Le fichier de mise à jour est introuvable.", Toast.LENGTH_SHORT).show()
+        if (!apkFile.exists() || apkFile.length() < 500_000) {
+            Toast.makeText(context, "Le fichier de mise à jour est introuvable ou incomplet.", Toast.LENGTH_SHORT).show()
+            openGitHubReleasesWeb(context)
             return
         }
 
@@ -284,6 +329,7 @@ object AppUpdaterManager {
                 "Erreur lors du lancement de l'installation : ${e.localizedMessage}",
                 Toast.LENGTH_LONG
             ).show()
+            openGitHubReleasesWeb(context)
         }
     }
 }
