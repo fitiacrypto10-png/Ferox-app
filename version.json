@@ -1,5 +1,5 @@
 {
-  "versionCode": 7,
-  "apkUrl": "https://github.com/fitiacrypto10-png/Ferox-app/releases/latest/download/Ferox-v2.4.apk",
-  "notes": "Mise à jour Ferox v2.4 :\n- Notifications interactives avec réponse rapide (Quick Reply) comme sur Messenger\n- Nom d'APK désormais versionné à chaque mise à jour (Ferox-v2.4.apk)\n- Amélioration continue de la fluidité et des transferts légers sous 200 Ko/s"
+  "versionCode": 8,
+  "apkUrl": "https://github.com/fitiacrypto10-png/Ferox-app/releases/latest/download/Ferox-v2.5.apk",
+  "notes": "Mise à jour Ferox v2.5 :\n- Déblocage définitif de l'inscription : importation fluide des photos de profil (Galerie et Caméra)\n- Résolution du problème de permissions d'accès aux photos\n- Nouveau fichier APK versionné (Ferox-v2.5.apk)\n- Notifications et réponses rapides style Messenger toujours actives"
 }

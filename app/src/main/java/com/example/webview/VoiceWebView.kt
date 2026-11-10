@@ -54,7 +54,7 @@ fun VoiceWebView(
     val fileChooserLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        FileChooserHelper.processResult(result.resultCode, result.data)
+        FileChooserHelper.processResult(context, result.resultCode, result.data)
     }
 
     val micPermissionLauncher = rememberLauncherForActivityResult(
@@ -215,6 +215,7 @@ fun VoiceWebView(
                         fileChooserParams: FileChooserParams?
                     ): Boolean {
                         if (filePathCallback == null) return false
+                        FileChooserHelper.cancelPreviousIfAny()
                         FileChooserHelper.pendingUploadCallback = filePathCallback
 
                         return try {
@@ -232,19 +233,6 @@ fun VoiceWebView(
                 com.example.network.DataSaverManager.cleanupAppStorage(ctx, this)
 
                 webViewClient = object : WebViewClient() {
-                    override fun shouldInterceptRequest(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): WebResourceResponse? {
-                        if (request != null) {
-                            val throttled = com.example.network.DataSaverManager.interceptMediaRequest(request)
-                            if (throttled != null) {
-                                return throttled
-                            }
-                        }
-                        return super.shouldInterceptRequest(view, request)
-                    }
-
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                         super.onPageStarted(view, url, favicon)
                         // Pre-inject mobile viewport fit css, Lovable logo purge, and audio hook

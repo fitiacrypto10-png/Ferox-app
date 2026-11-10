@@ -88,10 +88,9 @@ object LovableCleanScripts {
                         '/* Dégagement léger uniquement sur le dernier message pour qu\'il reste lisible */',
                         '[class*="message-list"] > *:last-child, [class*="messages-list"] > *:last-child {',
                         '    margin-bottom: 8px !important;',
-                        '}',
-                        '/* Économiseur de données : chargement optimisé des images */',
+                        '/* Affichage fluide et net des images et avatars */',
                         'img {',
-                        '    content-visibility: auto !important;',
+                        '    max-width: 100% !important;',
                         '}'
                     ].join('\n');
 

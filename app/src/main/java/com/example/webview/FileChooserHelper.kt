@@ -6,15 +6,17 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
+import android.webkit.MimeTypeMap
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import androidx.core.content.FileProvider
 import java.io.File
 
 /**
- * Assistant pour la sélection et l'importation de fichiers et photos de profil.
- * Supporte à la fois la Galerie (Photos) et l'Appareil Photo (Caméra)
- * tout en conservant les callbacks de manière stable sans perte lors des rotations ou changements d'état.
+ * Assistant infaillible pour l'importation de photos de profil et fichiers.
+ * - Ne cancelle JAMAIS prématurément le callback d'upload.
+ * - Copie en cache local sécurisé (FileProvider) pour éliminer les refus de permissions inter-applications.
+ * - Propose le choix entre Galerie et Caméra directe pour les photos de profil.
  */
 object FileChooserHelper {
 
@@ -25,19 +27,32 @@ object FileChooserHelper {
     var pendingCameraFile: File? = null
 
     /**
+     * Annule un callback précédent UNIQUEMENT s'il y en avait un encore actif
+     * avant d'enregistrer un nouveau.
+     */
+    fun cancelPreviousIfAny() {
+        try {
+            pendingUploadCallback?.onReceiveValue(null)
+        } catch (ignored: Exception) {}
+        pendingUploadCallback = null
+        pendingCameraUri = null
+        pendingCameraFile = null
+    }
+
+    /**
      * Construit un Intent de sélection optimisé (Galerie + Appareil Photo) pour les photos de profil et fichiers.
+     * ATTENTION : Ne JAMAIS appeler cancel() ici car cela détruirait le callback actif !
      */
     fun createFileChooserIntent(
         context: Context,
         params: WebChromeClient.FileChooserParams?
     ): Intent {
-        // Annuler tout callback précédent resté en attente pour éviter de bloquer WebView
-        cancel()
-
         val acceptTypes = params?.acceptTypes ?: emptyArray()
         val isImage = acceptTypes.isEmpty() || acceptTypes.any { type ->
-            type.contains("image", ignoreCase = true) || type.contains("jpg", ignoreCase = true) ||
-            type.contains("png", ignoreCase = true) || type == "*/*" || type.isBlank()
+            type.contains("image", ignoreCase = true) ||
+            type.contains("jpg", ignoreCase = true) ||
+            type.contains("png", ignoreCase = true) ||
+            type == "*/*" || type.isBlank()
         }
 
         val galleryIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
@@ -46,7 +61,7 @@ object FileChooserHelper {
                 type = "image/*"
                 putExtra(
                     Intent.EXTRA_MIME_TYPES,
-                    arrayOf("image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg")
+                    arrayOf("image/jpeg", "image/png", "image/webp", "image/gif")
                 )
             } else {
                 type = "*/*"
@@ -67,12 +82,12 @@ object FileChooserHelper {
             putExtra(Intent.EXTRA_TITLE, chooserTitle)
         }
 
-        // Si l'utilisateur importe une image, ajouter l'option directe de prendre une photo
+        // Ajouter l'option de prise de photo directe
         if (isImage) {
             try {
                 val tempCameraFile = File(
                     context.cacheDir,
-                    "profile_photo_${System.currentTimeMillis()}.jpg"
+                    "profile_camera_${System.currentTimeMillis()}.jpg"
                 )
                 pendingCameraFile = tempCameraFile
 
@@ -93,7 +108,7 @@ object FileChooserHelper {
                     arrayOf(cameraIntent)
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Impossible d'initialiser l'appareil photo dans le sélecteur: ${e.message}")
+                Log.e(TAG, "Impossible de préparer l'appareil photo: ${e.message}")
             }
         }
 
@@ -103,44 +118,54 @@ object FileChooserHelper {
     /**
      * Traite le résultat retourné par le sélecteur (Galerie ou Caméra) et transmet les URIs au WebView.
      */
-    fun processResult(resultCode: Int, intentData: Intent?) {
+    fun processResult(context: Context, resultCode: Int, intentData: Intent?) {
         val callback = pendingUploadCallback
         if (callback == null) {
-            Log.w(TAG, "processResult appelé mais aucun callback actif.")
+            Log.w(TAG, "processResult: aucun callback en attente.")
             return
         }
 
-        val uris: Array<Uri>? = if (resultCode == Activity.RESULT_OK) {
-            // 1. Essayer le parseur natif de WebChromeClient
-            val parsed = WebChromeClient.FileChooserParams.parseResult(resultCode, intentData)
-            if (parsed != null && parsed.isNotEmpty()) {
-                parsed
-            } else if (intentData?.data != null) {
-                // 2. URI unique dans data
-                arrayOf(intentData.data!!)
-            } else if (intentData?.clipData != null) {
-                // 3. Plusieurs fichiers dans clipData
-                val clipData = intentData.clipData!!
-                Array(clipData.itemCount) { i -> clipData.getItemAt(i).uri }
-            } else {
-                // 4. Photo capturée avec l'appareil photo
-                val camFile = pendingCameraFile
-                val camUri = pendingCameraUri
-                if (camFile != null && camFile.exists() && camFile.length() > 0 && camUri != null) {
-                    arrayOf(camUri)
-                } else {
-                    null
+        val resultUris: Array<Uri>? = if (resultCode == Activity.RESULT_OK) {
+            val extracted = mutableListOf<Uri>()
+
+            // 1. Photo prise par la caméra ?
+            val camFile = pendingCameraFile
+            val camUri = pendingCameraUri
+            if (camFile != null && camFile.exists() && camFile.length() > 0 && camUri != null) {
+                extracted.add(camUri)
+            }
+
+            // 2. Si pas de photo caméra, extraire depuis intentData
+            if (extracted.isEmpty()) {
+                val parsed = WebChromeClient.FileChooserParams.parseResult(resultCode, intentData)
+                if (parsed != null && parsed.isNotEmpty()) {
+                    extracted.addAll(parsed)
+                } else if (intentData?.data != null) {
+                    extracted.add(intentData.data!!)
+                } else if (intentData?.clipData != null) {
+                    val clip = intentData.clipData!!
+                    for (i in 0 until clip.itemCount) {
+                        extracted.add(clip.getItemAt(i).uri)
+                    }
                 }
+            }
+
+            // 3. Convertir en URIs sûres pour éliminer les problèmes de permissions
+            if (extracted.isNotEmpty()) {
+                val safeUris = extracted.map { uri -> resolveSafeUri(context, uri) }.toTypedArray()
+                safeUris
+            } else {
+                null
             }
         } else {
             null
         }
 
         try {
-            callback.onReceiveValue(uris)
-            Log.d(TAG, "Photo/Fichier transmis au WebView avec succès (${uris?.size ?: 0} éléments).")
+            callback.onReceiveValue(resultUris)
+            Log.d(TAG, "Photo/Fichier transmis avec succès: ${resultUris?.size ?: 0} élément(s)")
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur lors de la transmission au callback WebView: ${e.message}")
+            Log.e(TAG, "Erreur transmission callback: ${e.message}")
         } finally {
             pendingUploadCallback = null
             pendingCameraUri = null
@@ -149,7 +174,46 @@ object FileChooserHelper {
     }
 
     /**
-     * Annule proprement le callback en cours si l'utilisateur quitte sans sélectionner.
+     * Résout un accès fichier 100% garanti en copiant le fichier dans le cache local
+     * et en générant une URI FileProvider interne à l'application.
+     */
+    private fun resolveSafeUri(context: Context, sourceUri: Uri): Uri {
+        if (sourceUri.authority == "${context.packageName}.fileprovider") {
+            return sourceUri
+        }
+
+        return try {
+            val mimeType = context.contentResolver.getType(sourceUri)
+            val extension = if (!mimeType.isNullOrBlank()) {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
+            } else {
+                "jpg"
+            }
+
+            val safeFile = File(context.cacheDir, "avatar_upload_${System.currentTimeMillis()}.$extension")
+            context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                safeFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            if (safeFile.exists() && safeFile.length() > 0) {
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    safeFile
+                )
+            } else {
+                sourceUri
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Erreur copie sécurisée de l'image (${sourceUri}): ${e.message}")
+            sourceUri
+        }
+    }
+
+    /**
+     * Annule le callback en cours si l'utilisateur quitte sans sélectionner.
      */
     fun cancel() {
         try {
